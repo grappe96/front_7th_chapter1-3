@@ -71,6 +71,9 @@ function App() {
 
   const [isOverlapDialogOpen, setIsOverlapDialogOpen] = useState(false);
   const [overlappingEvents, setOverlappingEvents] = useState<Event[]>([]);
+  const [pendingDragEventData, setPendingDragEventData] = useState<
+    (EventForm & { id?: string }) | null
+  >(null);
   const [isRecurringDialogOpen, setIsRecurringDialogOpen] = useState(false);
   const [pendingRecurringEdit, setPendingRecurringEdit] = useState<Event | null>(null);
   const [pendingRecurringDelete, setPendingRecurringDelete] = useState<Event | null>(null);
@@ -81,8 +84,37 @@ function App() {
 
   const handleRecurringConfirm = async (editSingleOnly: boolean) => {
     if (recurringDialogMode === 'edit' && pendingRecurringEdit) {
-      // 편집 모드 저장하고 편집 폼으로 이동
       setRecurringEditMode(editSingleOnly);
+
+      // 드래그앤드롭으로 날짜가 변경된 경우
+      if (date && date !== pendingRecurringEdit.date) {
+        const updatedEvent: EventForm & { id?: string } = {
+          id: pendingRecurringEdit.id,
+          title: pendingRecurringEdit.title,
+          date: date,
+          startTime: pendingRecurringEdit.startTime,
+          endTime: pendingRecurringEdit.endTime,
+          description: pendingRecurringEdit.description,
+          location: pendingRecurringEdit.location,
+          category: pendingRecurringEdit.category,
+          repeat: pendingRecurringEdit.repeat,
+          notificationTime: pendingRecurringEdit.notificationTime,
+        };
+
+        if (editSingleOnly) {
+          // 해당 인스턴스만 수정 (반복 시리즈에서 분리)
+          await handleRecurringEdit(updatedEvent as Event, true);
+        } else {
+          // 모든 인스턴스 수정
+          await handleRecurringEdit(updatedEvent as Event, false);
+        }
+        setDate('');
+        setIsRecurringDialogOpen(false);
+        setPendingRecurringEdit(null);
+        return;
+      }
+
+      // 일반 편집 모드 저장하고 편집 폼으로 이동
       editEvent(pendingRecurringEdit);
       setIsRecurringDialogOpen(false);
       setPendingRecurringEdit(null);
@@ -222,8 +254,114 @@ function App() {
     };
   };
 
-  const handleOverlapConfirm = (eventData: EventForm & { id?: string }) => {
-    saveEvent(eventData);
+  const handleOverlapConfirm = async (eventData: EventForm & { id?: string }) => {
+    // 드래그앤드롭으로 날짜가 변경된 경우
+    if (pendingDragEventData && pendingDragEventData.id) {
+      try {
+        const response = await fetch(`/api/events/${pendingDragEventData.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...pendingDragEventData,
+            repeat: pendingDragEventData.repeat ?? {
+              type: 'none',
+              interval: 0,
+              endDate: '',
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update event');
+        }
+
+        await fetchEvents();
+        enqueueSnackbar('일정이 수정되었습니다', { variant: 'success' });
+        setPendingDragEventData(null);
+        return;
+      } catch (error) {
+        console.error('Error updating event:', error);
+        enqueueSnackbar('일정 수정 실패', { variant: 'error' });
+        setPendingDragEventData(null);
+        return;
+      }
+    }
+    await saveEvent(eventData);
+  };
+
+  /**
+   * Handles drag and drop event date change
+   * 1. 드래그앤드롭 기본 기능: 날짜만 변경, 시간/기타 정보 유지
+   */
+  const handleDragEnd = async (eventId: string, newDate: string) => {
+    const draggedEvent = events.find((e) => e.id === eventId);
+    if (!draggedEvent) {
+      return;
+    }
+
+    // 날짜가 변경되지 않았으면 업데이트하지 않음
+    if (draggedEvent.date === newDate) {
+      return;
+    }
+
+    // 2. 반복 일정 처리: 반복 일정인 경우 RecurringEventDialog 표시
+    if (isRecurringEvent(draggedEvent)) {
+      setPendingRecurringEdit(draggedEvent);
+      setRecurringDialogMode('edit');
+      setIsRecurringDialogOpen(true);
+      // 새로운 날짜를 임시 저장 (다이얼로그 확인 후 사용)
+      setDate(newDate);
+      return;
+    }
+
+    // 일반 일정인 경우 날짜만 변경
+    const updatedEvent: EventForm & { id?: string } = {
+      id: draggedEvent.id,
+      title: draggedEvent.title,
+      date: newDate,
+      startTime: draggedEvent.startTime,
+      endTime: draggedEvent.endTime,
+      description: draggedEvent.description,
+      location: draggedEvent.location,
+      category: draggedEvent.category,
+      repeat: draggedEvent.repeat,
+      notificationTime: draggedEvent.notificationTime,
+    };
+
+    // 3. 겹침 감지 및 처리: 겹침이 있으면 OverlapDialog 표시
+    const overlapping = findOverlappingEvents(updatedEvent, events);
+    if (overlapping.length > 0) {
+      setOverlappingEvents(overlapping);
+      setPendingDragEventData(updatedEvent);
+      setIsOverlapDialogOpen(true);
+      return;
+    }
+
+    // 겹침이 없으면 즉시 업데이트 (드래그앤드롭은 항상 수정이므로 직접 PUT 요청)
+    try {
+      const response = await fetch(`/api/events/${draggedEvent.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...updatedEvent,
+          repeat: updatedEvent.repeat ?? {
+            type: 'none',
+            interval: 0,
+            endDate: '',
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update event');
+      }
+
+      await fetchEvents();
+      enqueueSnackbar('일정이 수정되었습니다', { variant: 'success' });
+    } catch (error) {
+      console.error('Error updating event:', error);
+      enqueueSnackbar('일정 수정 실패', { variant: 'error' });
+    }
   };
 
   return (
@@ -268,6 +406,8 @@ function App() {
           navigate={navigate}
           filteredEvents={filteredEvents}
           notifiedEvents={notifiedEvents}
+          onDragEnd={handleDragEnd}
+          onDateClick={setDate}
         />
 
         <EventList
@@ -282,9 +422,12 @@ function App() {
 
       <OverlapDialog
         open={isOverlapDialogOpen}
-        onClose={() => setIsOverlapDialogOpen(false)}
+        onClose={() => {
+          setIsOverlapDialogOpen(false);
+          setPendingDragEventData(null);
+        }}
         overlappingEvents={overlappingEvents}
-        eventData={getEventData()}
+        eventData={pendingDragEventData || getEventData()}
         onConfirm={handleOverlapConfirm}
       />
 
