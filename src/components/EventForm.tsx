@@ -1,3 +1,5 @@
+import React from 'react';
+
 import {
   Button,
   Checkbox,
@@ -14,7 +16,6 @@ import {
 
 import { Event, RepeatType } from '../types';
 import { getTimeErrorMessage } from '../utils/timeValidation';
-import React from 'react';
 
 /**
  * Category options
@@ -39,11 +40,11 @@ interface EventFormProps {
   /** Form title */
   title: string;
   /** Set title handler */
-  setTitle: (title: string) => void;
+  setTitle: (_title: string) => void;
   /** Form date */
   date: string;
   /** Set date handler */
-  setDate: (date: string) => void;
+  setDate: (_date: string) => void;
   /** Start time */
   startTime: string;
   /** End time */
@@ -51,35 +52,35 @@ interface EventFormProps {
   /** Description */
   description: string;
   /** Set description handler */
-  setDescription: (description: string) => void;
+  setDescription: (_description: string) => void;
   /** Location */
   location: string;
   /** Set location handler */
-  setLocation: (location: string) => void;
+  setLocation: (_location: string) => void;
   /** Category */
   category: string;
   /** Set category handler */
-  setCategory: (category: string) => void;
+  setCategory: (_category: string) => void;
   /** Is repeating */
   isRepeating: boolean;
   /** Set is repeating handler */
-  setIsRepeating: (isRepeating: boolean) => void;
+  setIsRepeating: (_isRepeating: boolean) => void;
   /** Repeat type */
   repeatType: RepeatType;
   /** Set repeat type handler */
-  setRepeatType: (type: RepeatType) => void;
+  setRepeatType: (_type: RepeatType) => void;
   /** Repeat interval */
   repeatInterval: number;
   /** Set repeat interval handler */
-  setRepeatInterval: (interval: number) => void;
+  setRepeatInterval: (_interval: number) => void;
   /** Repeat end date */
   repeatEndDate: string;
   /** Set repeat end date handler */
-  setRepeatEndDate: (date: string) => void;
+  setRepeatEndDate: (_date: string) => void;
   /** Notification time */
   notificationTime: number;
   /** Set notification time handler */
-  setNotificationTime: (time: number) => void;
+  setNotificationTime: (_time: number) => void;
   /** Start time error */
   startTimeError: string | null;
   /** End time error */
@@ -87,9 +88,9 @@ interface EventFormProps {
   /** Editing event (null if creating new) */
   editingEvent: Event | null;
   /** Start time change handler */
-  handleStartTimeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleStartTimeChange: (_e: React.ChangeEvent<HTMLInputElement>) => void;
   /** End time change handler */
-  handleEndTimeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleEndTimeChange: (_e: React.ChangeEvent<HTMLInputElement>) => void;
   /** Submit handler */
   onSubmit: () => void;
 }

@@ -1,3 +1,4 @@
+import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import {
@@ -13,7 +14,6 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd';
 
 import EventBox from './EventBox';
 import { Event } from '../types';
@@ -44,13 +44,13 @@ interface CalendarViewProps {
   /** Holidays dictionary */
   holidays: Record<string, string>;
   /** Navigate handler */
-  navigate: (direction: 'prev' | 'next') => void;
+  navigate: (_direction: 'prev' | 'next') => void;
   /** Filtered events to display */
   filteredEvents: Event[];
   /** List of event IDs that have been notified */
   notifiedEvents: string[];
   /** Handler for drag and drop event date change */
-  onDragEnd?: (eventId: string, newDate: string) => void;
+  onDragEnd?: (_eventId: string, newDate: string) => void;
   /** Handler for date cell click */
   onDateClick?: (date: string) => void;
 }

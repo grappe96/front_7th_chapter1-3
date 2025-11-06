@@ -23,14 +23,20 @@ interface OverlapDialogProps {
   /** Event data to save */
   eventData: EventForm & { id?: string };
   /** Submit handler to save the event */
-  onConfirm: (eventData: EventForm & { id?: string }) => void;
+  onConfirm: (_eventData: EventForm & { id?: string }) => void;
 }
 
 /**
  * Dialog component for warning about overlapping events
  * Allows user to proceed with saving despite overlap or cancel
  */
-const OverlapDialog = ({ open, onClose, overlappingEvents, eventData, onConfirm }: OverlapDialogProps) => {
+const OverlapDialog = ({
+  open,
+  onClose,
+  overlappingEvents,
+  eventData,
+  onConfirm,
+}: OverlapDialogProps) => {
   const handleConfirm = () => {
     onClose();
     onConfirm(eventData);
